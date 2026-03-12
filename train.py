@@ -125,10 +125,9 @@ class Trainer:
             gt_texture = self.dataset.expand_to_canonical(gt_texture).to(torch.float16)
 
             # xys -> uvs
-            # shift the sample position from [0, 1, ..., 1023] -> [0.5, 1.5, ..., 1023.5]
-            # uvs = ((xys + 0.5) / lod_scale) / (texture_weight / lod_scale)
-            us = (xs + 0.5) / self.texture_height 
-            vs = (ys + 0.5) / self.texture_width
+            # for tcnn
+            us = (xs - 0.5) / (self.texture_height - 1.0)
+            vs = (ys - 0.5) / (self.texture_width - 1.0)
             lods = lods / (self.num_lods - 1)
             batch_input = torch.cat([us, vs, lods], dim=1)
             # predict
@@ -212,8 +211,9 @@ class Trainer:
             lod_height = self.texture_height // (2 ** lod)
             lod_width = self.texture_width // (2 ** lod)
             x_coords, y_coords = torch.meshgrid(torch.arange(lod_height), torch.arange(lod_width), indexing='xy')
-            u_coords = (x_coords + 0.5) / lod_height
-            v_coords = (y_coords + 0.5) / lod_width 
+            # tcnn 风格坐标变换: coord = (pixel - 0.5) / (size - 1)
+            u_coords = (x_coords - 0.5) / (lod_height - 1.0)
+            v_coords = (y_coords - 0.5) / (lod_width - 1.0)
             lod_coords = torch.ones_like(x_coords) * lod / (self.num_lods - 1)
             # eval_input = torch.stack([u_coords, v_coords, lod_coords, x_coords, y_coords], dim=2).to(self.device)
             # eval_input = eval_input.reshape([-1, 5])
@@ -314,8 +314,9 @@ class Trainer:
             x_coords, y_coords = torch.meshgrid(
                 torch.arange(lod_height), torch.arange(lod_width), 
             indexing='xy')
-            u_coords = (x_coords + 0.5) / lod_height
-            v_coords = (y_coords + 0.5) / lod_width 
+            # tcnn 风格坐标变换: coord = (pixel - 0.5) / (size - 1)
+            u_coords = (x_coords - 0.5) / (lod_height - 1.0)
+            v_coords = (y_coords - 0.5) / (lod_width - 1.0)
             lod_coords = torch.ones_like(x_coords) * lod / (self.num_lods - 1)
             eval_input = torch.stack([u_coords, v_coords, lod_coords, x_coords, y_coords], dim=2).to(self.device)
             eval_input = eval_input.reshape([-1, 5])
